@@ -91,7 +91,7 @@ getFile(const char *filename, char *buffer, int bufferSize)
   f = TSfopen(filename, "r");
   if (!f) {
     buffer[0] = 0;
-    //Return -1 to indicate read err
+    // Return -1 to indicate read err
     return -1;
   }
 
@@ -142,12 +142,10 @@ setNetStat(TSMutex stat_creation_mutex, const char *interface, const char *entry
   }
 
   if (getFile(&sysfs_name[0], &data[0], sizeof(data)) < 0) {
-    TSDebug(DEBUG_TAG, "Error reading file %s", sysfs_name);   
-  }
-  else{
+    TSDebug(DEBUG_TAG, "Error reading file %s", sysfs_name);
+  } else {
     statSet(stat_name, atoi(data), stat_creation_mutex);
   }
-
 }
 
 static int
@@ -206,7 +204,7 @@ getStats(TSMutex stat_creation_mutex)
   statSet(LOAD_AVG_FIVE_MIN, info.loads[1], stat_creation_mutex);
   statSet(LOAD_AVG_TEN_MIN, info.loads[2], stat_creation_mutex);
   statSet(CURRENT_PROCESSES, info.procs, stat_creation_mutex);
-#endif // #ifdef HAVE_SYS_SYSINFO_H  
+#endif // #ifdef HAVE_SYS_SYSINFO_H
   netStatsInfo(stat_creation_mutex);
 
   return;
@@ -218,7 +216,7 @@ systemStatsContCB(TSCont cont, TSEvent event ATS_UNUSED, void *edata)
   TSMutex stat_creation_mutex;
 
   TSDebug(DEBUG_TAG, "entered %s", __FUNCTION__);
-  
+
   stat_creation_mutex = TSContMutexGet(cont);
   getStats(stat_creation_mutex);
 
