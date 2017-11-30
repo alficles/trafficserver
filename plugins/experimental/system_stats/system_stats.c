@@ -96,10 +96,11 @@ getFile(const char *filename, char *buffer, int bufferSize)
   }
 
   s = TSfread(f, buffer, bufferSize);
-  if (s > 0)
+  if (s > 0) {
     buffer[s] = 0;
-  else
+  } else {
     buffer[0] = 0;
+}
 
   TSfclose(f);
 
