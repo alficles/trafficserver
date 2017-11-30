@@ -48,14 +48,28 @@
 static char range_type[] = "multipart/byteranges; boundary=RANGE_SEPARATOR";
 #define RANGE_NUMBERS_LENGTH 60
 
-#define TRANSACT_REMEMBER(_s, _e, _d)                                        \
-  {                                                                          \
-    HttpSM *sm                                        = (_s)->state_machine; \
-    sm->history[sm->history_pos % HISTORY_SIZE].file  = __FILE__;            \
-    sm->history[sm->history_pos % HISTORY_SIZE].line  = __LINE__;            \
-    sm->history[sm->history_pos % HISTORY_SIZE].event = _e;                  \
-    sm->history[sm->history_pos % HISTORY_SIZE].data  = (void *)_d;          \
-    sm->history_pos += 1;                                                    \
+#define TRANSACT_SETUP_RETURN(n, r) \
+  s->next_action           = n;     \
+  s->transact_return_point = r;     \
+  DebugSpecific((s->state_machine && s->state_machine->debug_on), "http_trans", "Next action %s; %s", #n, #r);
+
+#define TRANSACT_RETURN(n, r) \
+  TRANSACT_SETUP_RETURN(n, r) \
+  return;
+
+#define TRANSACT_RETURN_VAL(n, r, v) \
+  TRANSACT_SETUP_RETURN(n, r)        \
+  return v;
+
+#define SET_UNPREPARE_CACHE_ACTION(C)                               \
+  {                                                                 \
+    if (C.action == HttpTransact::CACHE_PREPARE_TO_DELETE) {        \
+      C.action = HttpTransact::CACHE_DO_DELETE;                     \
+    } else if (C.action == HttpTransact::CACHE_PREPARE_TO_UPDATE) { \
+      C.action = HttpTransact::CACHE_DO_UPDATE;                     \
+    } else {                                                        \
+      C.action = HttpTransact::CACHE_DO_WRITE;                      \
+    }                                                               \
   }
 
 #define DebugTxn(tag, fmt, ...) \
@@ -7359,9 +7373,8 @@ HttpTransact::handle_server_died(State *s)
     body_type = "response#bad_response";
     break;
   case CONNECTION_ERROR:
-    status = HTTP_STATUS_BAD_GATEWAY;
-    reason =
-      static_cast<const char *>(get_error_string(s->cause_of_death_errno == 0 ? -ENET_CONNECT_FAILED : s->cause_of_death_errno));
+    status    = HTTP_STATUS_BAD_GATEWAY;
+    reason    = get_error_string(s->cause_of_death_errno == 0 ? -ENET_CONNECT_FAILED : s->cause_of_death_errno);
     body_type = "connect#failed_connect";
     break;
   case OPEN_RAW_ERROR:

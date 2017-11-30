@@ -1383,9 +1383,9 @@ plugins required to work with sni_routing.
 
       NetVConnection *netvc     = ua_session->get_netvc();
       SSLNetVConnection *ssl_vc = dynamic_cast<SSLNetVConnection *>(netvc);
-      auto *hs                  = TunnelMap.find(ssl_vc->serverName);
 
       if (ssl_vc && ssl_vc->GetSNIMapping()) {
+        auto *hs = TunnelMap.find(ssl_vc->serverName);
         if (hs != nullptr) {
           t_state.hdr_info.client_request.url_get()->host_set(hs->hostname, hs->len);
           if (hs->port > 0) {
@@ -2872,15 +2872,7 @@ bool
 HttpSM::is_http_server_eos_truncation(HttpTunnelProducer *p)
 {
   if ((p->do_dechunking || p->do_chunked_passthru) && p->chunked_handler.truncation) {
-    // TS-3054 - In the chunked cases, chunked data that is incomplete
-    // should not be cached, but it should be passed onto the client
-    // This makes ATS more transparent in the case of non-standard
-    // servers.  The cache aborts are dealt with in other checks
-    // on the truncation flag elsewhere in the code.  This return value
-    // invalidates the current data being passed over to the client.
-    // So changing it from return true to return false, so the partial data
-    // is passed onto the client.
-    return false;
+    return true;
   }
 
   //////////////////////////////////////////////////////////////
@@ -6149,6 +6141,10 @@ HttpSM::setup_100_continue_transfer()
 
   HTTP_SM_SET_DEFAULT_HANDLER(&HttpSM::tunnel_handler_100_continue);
 
+  // Clear the decks before we set up new producers.  As things stand, we cannot have two static operators
+  // at once
+  tunnel.reset();
+
   // Setup the tunnel to the client
   HttpTunnelProducer *p = tunnel.add_producer(HTTP_TUNNEL_STATIC_PRODUCER, client_response_hdr_bytes, buf_start,
                                               (HttpProducerHandler) nullptr, HT_STATIC, "internal msg - 100 continue");
@@ -8049,7 +8045,7 @@ HttpSM::find_proto_string(HTTPVersion version) const
   } else if (version == HTTPVersion(0, 9)) {
     return IP_PROTO_TAG_HTTP_0_9;
   }
-  return nullptr;
+  return {};
 }
 
 // YTS Team, yamsat Plugin
